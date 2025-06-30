@@ -1,0 +1,27 @@
+expname = bonsai_style
+basedir = ./logs
+datadir = ./data/bonsai
+styledir = ./style/
+dataset_type = mip360
+
+factor = 4
+
+nerf_type = style_nerf
+nerf_type_fine = style_nerf
+style_type = mlp
+latent_type = variational
+
+batch_size = 2048 # 2048
+batch_size_style = 256 # 1024
+N_samples = 128
+N_samples_fine = 256
+
+use_viewdir
+sigma_noise_std = 1e0
+
+origin_step = 300002 # 127000 seman
+total_step = 308001 # 5000001
+
+style_D = 8
+valid_factor = 3
+gen_factor = 1

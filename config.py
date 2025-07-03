@@ -14,24 +14,21 @@ def config_parser():
                         help='input data directory')
     parser.add_argument("--styledir", type=str, default='./style/')
     parser.add_argument("--dataset_type", type=str, default='llff')
-    # action='store_true'含义：如果运行代码时加了--no_ndc，那么no_ndc为true，如果没加--no_ndc，那么no_ndc为False
-    parser.add_argument("--no_ndc", action='store_true', help='No NDC for llff dataset.')   # 是否使用标准化的设备坐标
-    parser.add_argument("--white_bkgd", action='store_true', help='White Background for blender dataset.')    # 白色背景
+    parser.add_argument("--no_ndc", action='store_true', help='No NDC for llff dataset.')
+    parser.add_argument("--white_bkgd", action='store_true', help='White Background for blender dataset.')
     parser.add_argument("--half_res", action='store_true', help='Half resolution for linemod dataset.')
     parser.add_argument("--spherify", action='store_true', help='Spherify camera poses or not')
     # pretrain
     parser.add_argument("--decoder_pth_path", type=str, default='./pretrained/decoder.pth')
     parser.add_argument("--vgg_pth_path", type=str, default='./pretrained/vgg_normalised.pth')
     parser.add_argument("--vae_pth_path", type=str, default='./pretrained/vae.pth')
-    # 下采样倍数
     parser.add_argument("--factor", type=float, default=1., help='factor to downsample images')
-    parser.add_argument("--gen_factor", type=float, default=0.2, help='factor for interpolate trace when style training')    # 5,
+    parser.add_argument("--gen_factor", type=float, default=0.2, help='factor for interpolate trace when style training')
     parser.add_argument("--valid_factor", type=float, default=0.05, help='factor for interpolate trace when validating')
     parser.add_argument("--num_workers", type=int, default=0, help='Number of workers for torch dataloader.')
     parser.add_argument("--store_rays", type=int, default=1, help='factor to downsample images')
 
     # training options
-    # 不适用视角数据
     parser.add_argument("--use_viewdir", action='store_true',
                         help='use view direction as input.')
     parser.add_argument("--sample_type", type=str, default='uniform',
@@ -61,9 +58,7 @@ def config_parser():
     parser.add_argument("--content_loss_lambda", type=float, default=1.,
                         help='Coefficient for style loss')
     parser.add_argument("--loss_coh_lambda", type=float, default=1e1,
-    # fern:5e3,flower:5e3,orchids:5e2,trex:5e3/1e2,horns:5e3,chairs:1.
-                        # Truck:1e3, Family:73_5e2, Train:1e2, Playground:5e2, M60:5e1
-                        # bonsai:1e2,5e1
+    # fern:5e3,flower:5e3,orchids:5e2,trex:1e2,horns:5e3
                         help='Coefficient for style loss')
     parser.add_argument("--logp_loss_lambda", type=float, default=0.1,
                         help='Coefficient for logp loss')

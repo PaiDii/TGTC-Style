@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-# 计算均均值和标准差
 def calc_mean_std(feat, eps=1e-5):
     # eps is a small value added to the variance to avoid divide-by-zero.
     size = feat.size()
@@ -18,9 +17,7 @@ def adaptive_instance_normalization(content_feat, style_feat):
     size = content_feat.size()
     style_mean, style_std = calc_mean_std(style_feat)
     content_mean, content_std = calc_mean_std(content_feat)
-    # 归一化
     normalized_feat = (content_feat - content_mean.expand(size)) / content_std.expand(size)
-    # 感觉相当于把风格标准差当作权重，均值当作偏移
     return normalized_feat * style_std.expand(size) + style_mean.expand(size)
 
 
@@ -80,18 +77,12 @@ def styleLoss(input, target):
     tCov = GramMatrix(target)
 
     loss = nn.MSELoss(size_average=False)(iMean,tMean) + nn.MSELoss(size_average=False)(iCov, tCov)
-    # 归一化：除以什么变量相当于对什么变量进行归一化，消除变量变化所带来的影响
-    # 当无法确保不同图像下该变量个数是否一致，则可以除一下
     return loss/tb
 
-# Gram矩阵被用于表征图像的风格。在图像修复问题中，很常用的一项损失叫做风格损失（style loss），风格损失正是基于预测结果和真值之间的Gram矩阵的差异构建的。
-# bmm == 3dim, mm == 2dim
 def GramMatrix(input):
     b, c, h, w = input.size()
     f = input.view(b, c, h*w) # bxcx(hxw)
     # torch.bmm(batch1, batch2, out=None)
     # batch1: bxmxp, batch2: bxpxn -> bxmxn
     G = torch.bmm(f, f.transpose(1, 2))  # f: bxcx(hxw), f.transpose: bx(hxw)xc -> bxcxc
-    # 归一化 Gram 矩阵可以消除特征图大小和通道数的影响，使得不同大小和通道数的特征图之间可以进行比较。
-    # 通过将结果除以 c x h x w，相当于将每个元素除以特征图的总大小，从而将值范围缩放到一个相对较小的区间。
     return G.div_(c*h*w)

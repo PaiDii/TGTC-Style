@@ -6,51 +6,12 @@ import VGGNet
 from rendering import *
 from dataset import RaySampler, StyleRaySampler, StyleRaySampler_gen, LightDataLoader
 from models import StyleNerf, StyleMLP_Wild_multilayers, VAE, StyleLatents_variational, StyleMLP_before_concat
-from train_style_modules import train_temporal_invoke, train_temporal_invoke_pl
+from train_style_modules import train_temporal_invoke
 from config import config_parser
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train(args):
-    """Check Nerf Type"""
-    nerf_dict = {'style_nerf': StyleNerf}
-    nerf_type_str = ''
-    for nerf_type in nerf_dict.keys():
-        nerf_type_str += (nerf_type + ' ')
-    assert args.nerf_type in nerf_dict.keys(), 'Unknown nerf type: ' + args.nerf_type + '. Only support: ' + nerf_type_str
-    print('Type of nerf: ', args.nerf_type)
-
-    """Style Module Type"""
-    style_module_dict = {'mlp': StyleMLP_Wild_multilayers}
-    style_type_str = ''
-    for style_type in style_module_dict.keys():
-        style_type_str += (style_type + ' ')
-    assert args.style_type in style_module_dict.keys(), 'Unknown style type: ' + args.style_type + '. Only support: ' + style_type_str
-    print('Type of style: ', args.style_type)
-
-    """concat Style Module Type"""
-    concat_style_module_dict = {'mlp': StyleMLP_before_concat}
-    style_type_str = ''
-    for style_type in concat_style_module_dict.keys():
-        style_type_str += (style_type + ' ')
-    assert args.style_type in concat_style_module_dict.keys(), 'Unknown style type: ' + args.style_type + '. Only support: ' + style_type_str
-    print('Type of style: ', args.style_type)
-
-    """Latent Module Type"""
-    latent_module_dict = {'variational': StyleLatents_variational}
-    latent_type_str = ''
-    for latent_type in latent_module_dict.keys():
-        latent_type_str += (latent_type + ' ')
-    assert args.latent_type in latent_module_dict.keys(), 'Unknown latent type: ' + args.latent_type + '. Only support: ' + latent_type_str
-    print('Type of latent: ', args.latent_type)
-
-    """Check Sampling Type"""
-    samp_dict = {'uniform': sampling_pts_uniform}
-    samp_type_str = ''
-    for samp_type in samp_dict.keys():
-        samp_type_str += (samp_type + ' ')
-    assert args.sample_type in samp_dict.keys(), 'Unknown nerf type: ' + args.sample_type + '. Only support: ' + samp_type_str
-    print('Sampling Strategy: ', args.sample_type)
-    samp_func = samp_dict[args.sample_type]
+    samp_func = sampling_pts_uniform
     if args.N_samples_fine > 0:
         samp_func_fine = sampling_pts_fine_torch
 
@@ -62,14 +23,14 @@ def train(args):
     nerf_gen_data_path = sv_path + '/nerf_gen_data2/'
 
     """Create Nerfs"""
-    nerf = nerf_dict[args.nerf_type]
+    nerf = StyleNerf
     model = nerf(args=args, mode='coarse').to(device)
     model.train()
     grad_vars = list(model.parameters())
     model_forward = batchify(lambda **kwargs: model(**kwargs), args.chunk)
 
     if args.N_samples_fine > 0:
-        nerf_fine = nerf_dict[args.nerf_type_fine]
+        nerf_fine = StyleNerf
         model_fine = nerf_fine(args=args, mode='fine').to(device)
         model_fine.train()
         grad_vars += list(model_fine.parameters())
@@ -78,30 +39,19 @@ def train(args):
     optimizer = torch.optim.Adam(params=grad_vars, lr=args.lrate, betas=(0.9, 0.999))
 
     """Create concat Style Module"""
-    concat_style = concat_style_module_dict[args.style_type]
+    concat_style = StyleMLP_before_concat
     concat_style_model = concat_style(args).to(device)
     concat_style_model.train()
     concat_style_vars = list(concat_style_model.parameters())
     concat_style_forward = batchify(lambda **kwargs: concat_style_model(**kwargs), args.chunk)
 
     """Create Style Module"""
-    style = style_module_dict[args.style_type]
+    style = StyleMLP_Wild_multilayers
     style_model = style(args).to(device)
     style_model.train()
     style_vars = list(style_model.parameters())
     style_forward = batchify(lambda **kwargs: style_model(**kwargs), args.chunk)
     style_optimizer = torch.optim.Adam(params=style_vars + concat_style_vars, lr=args.lrate, betas=(0.9, 0.999))
-
-    """VGG and Decoder"""
-    # decoder = VGGNet.decoder
-    # vgg = VGGNet.vgg
-    # decoder.eval()
-    # vgg.eval()
-    # decoder.load_state_dict(torch.load('./pretrained/decoder.pth'))
-    # vgg.load_state_dict(torch.load('./pretrained/vgg_normalised.pth'))
-    # vgg = nn.Sequential(*list(vgg.children())[:31])  # relu4-1
-    # vgg.to(device)
-    # decoder.to(device)
 
     """Load Check Point"""
     global_step = 0
@@ -149,25 +99,11 @@ def train(args):
         is_ndc = (args.dataset_type == 'llff' and not args.no_ndc)
         if not os.path.exists(sv_path + '/' + sv_name):
             if not os.path.exists(nerf_gen_data_path):
-                Prepare_Style_data(nerf_gen_data_path=nerf_gen_data_path) # 生成stylized_4.0和nerf_gen_data2
+                Prepare_Style_data(nerf_gen_data_path=nerf_gen_data_path)
             print('Training 2D Style Module')
-            # 对预训练的decoder中加入三维信息以得到生成stylized_gen_4.0要用的decoder，后面这个decoder也在整体训练过程中相互学习
-            if (args.dataset_type == 'llff' or args.dataset_type == 'mip360'):
+            if args.dataset_type == 'llff':
                 train_temporal_invoke(save_dir=sv_path, sv_name=sv_name, log_dir=sv_path + '/style_decoder/',
-                                      is_ndc=is_ndc, nerf_content_dir=nerf_gen_data_path, style_dir=args.styledir, batch_size=4)
-            else:
-                train_temporal_invoke_pl(save_dir=sv_path, sv_name=sv_name, log_dir=sv_path + '/style_decoder/',
-                                         nerf_content_dir=nerf_gen_data_path, style_dir=args.styledir, batch_size=4)
-        # elif os.path.exists(sv_path + '/' + sv_name):
-        #     print('Training 2D Style Module')
-        #     # 对预训练的decoder中加入三维信息以得到生成stylized_gen_4.0要用的decoder，后面这个decoder也在整体训练过程中相互学习
-        #     if args.dataset_type == 'llff':
-        #         train_temporal_invoke(save_dir=sv_path, sv_name=sv_name, log_dir=sv_path + '/style_decoder/',
-        #                               is_ndc=is_ndc,
-        #                               nerf_content_dir=nerf_gen_data_path, style_dir=args.styledir, batch_size=4)
-        #     else:
-        #         train_temporal_invoke_pl(save_dir=sv_path, sv_name=sv_name, log_dir=sv_path + '/style_decoder/',
-        #                                  nerf_content_dir=nerf_gen_data_path, style_dir=args.styledir, batch_size=4)
+                                      is_ndc=is_ndc, nerf_content_dir=nerf_gen_data_path, style_dir=args.styledir, data_p=args.datadir+ '/stylized_gen_4.0', batch_size=4)
 
     """Dataset Creation"""
     if global_step + 1 < args.origin_step and not os.path.exists(nerf_gen_data_path):
@@ -179,7 +115,6 @@ def train(args):
         # if not os.path.exists(nerf_gen_data_path):
         #     Prepare_Style_data(nerf_gen_data_path=nerf_gen_data_path)
 
-        # 生成stylized_gen_4.0
         train_dataset = StyleRaySampler_gen(data_path=args.datadir, gen_path=nerf_gen_data_path,
                                             style_path=args.styledir,
                                             factor=args.factor,
@@ -197,7 +132,7 @@ def train(args):
         vae.load_state_dict(torch.load(vae_ckpt))
 
         """Latents Module"""
-        latent_model_class = latent_module_dict[args.latent_type]
+        latent_model_class = StyleLatents_variational
         latents_model_1 = latent_model_class(style_num=train_dataset.style_num, frame_num=train_dataset.frame_num, latent_dim=args.vae_latent).to(device)
         vae.to(device)
 
@@ -223,40 +158,6 @@ def train(args):
         vae.cpu()
 
     train_dataloader = DataLoader(train_dataset, args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=(args.num_workers > 0))
-
-    # Render valid origin map
-    if args.render_valid:
-        render_path = os.path.join(sv_path, 'render_valid_' + str(global_step))
-        valid_dataset = train_dataset
-        valid_dataset.mode = 'valid'
-        valid_dataloader = DataLoader(valid_dataset, args.batch_size, shuffle=False, num_workers=args.num_workers,
-                                      pin_memory=(args.num_workers > 0))
-        with torch.no_grad():
-            if args.N_samples_fine > 0:
-                rgb_map, t_map, rgb_map_fine, t_map_fine = render(model_forward=model_forward, samp_func=samp_func,
-                                                                  dataloader=valid_dataloader,
-                                                                  args=args, device=device, sv_path=render_path,
-                                                                  model_forward_fine=model_forward_fine,
-                                                                  samp_func_fine=samp_func_fine)
-            else:
-                rgb_map, t_map, _, _ = render(model_forward=model_forward, samp_func=samp_func,
-                                              dataloader=valid_dataloader,
-                                              args=args, device=device, sv_path=render_path)
-        print('Done, saving', rgb_map.shape, t_map.shape)
-        exit(0)
-
-    # Render train origin map
-    if args.render_train:
-        render_path = os.path.join(sv_path, 'render_train_' + str(global_step))
-        render_dataset = train_dataset
-        if args.N_samples_fine > 0:
-            render_train(samp_func=samp_func, model_forward=model_forward, dataset=render_dataset, args=args,
-                         device=device, sv_path=render_path, model_forward_fine=model_forward_fine,
-                         samp_func_fine=samp_func_fine)
-        else:
-            render_train(samp_func=samp_func, model_forward=model_forward, dataset=render_dataset, args=args,
-                         device=device, sv_path=render_path)
-        exit(0)
 
     # Render valid style
     if args.render_valid_style:
@@ -412,20 +313,6 @@ def train(args):
         data_time, model_time, opt_time = 0, 0, 0
         fine_time = 0
 
-        """VGG Net"""
-        # decoder = VGGNet.decoder
-        # vgg = VGGNet.vgg
-        #
-        # decoder_data = torch.load(sv_path + '/decoder.pth')
-        # if 'decoder' in decoder_data.keys():
-        #     decoder.load_state_dict(decoder_data['decoder'])
-        # else:
-        #     decoder.load_state_dict(decoder_data)
-        # vgg.load_state_dict(torch.load(args.vgg_pth_path))
-        # vgg = nn.Sequential(*list(vgg.children())[:31])
-        # style_net = VGGNet.Net(vgg, decoder)
-        # style_net.to(device)
-
         """Dataset Mode for Style"""
         if not type(train_dataset) is StyleRaySampler_gen:
             train_dataset = StyleRaySampler_gen(data_path=args.datadir, gen_path=nerf_gen_data_path,
@@ -529,7 +416,6 @@ def train(args):
                 # concated_features = torch.cat((base_remap_features, first_style_latents_forward), dim=-1)
 
                 style_latents_forward = torch.unsqueeze(style_latents, dim=2).expand([ray_num, pts_num, first_style_latents.shape[-1]])
-                print(121, style_latents.shape, style_latents_forward.shape)
                 ret_style = style_forward(x=pts_embed, concated=concated_features, latent=style_latents_forward)
                 # ret_style = style_forward(x=pts_embed, concated=concated_features)
 
@@ -567,9 +453,6 @@ def train(args):
                         y = rgb_exp_style_fine2
                     else:
                         if cnt != 0:
-                            # 最小化风格化图像块与内容图像块的纹理差异，以提升生成的质量与清晰度。同时计算t0帧的图像块变化与t1帧的图像块变化以此来提升帧间连续性，可以减少风格化过程中常见的闪烁（Flickering）问题
-                            # 同时t0帧的图像块变化，应该与t1帧的图像块变化相匹配，以此来提升帧间连续性
-                            # 画个图 very nice
                             loss_coh = loss_coh + L2_norm(VGGNet.cosine_similarity(rgb_exp_style_fine2, y) - VGGNet.cosine_similarity(rgb_origin2, x_origin))
                         y = rgb_exp_style_fine2
                         cnt += 1
@@ -600,7 +483,7 @@ def train(args):
                 loss_for_style = loss_rgb + loss_logp + args.loss_coh_lambda * loss_coh
 
                 opt_t = time.time()
-                if global_step > 302000:
+                if global_step > 122000:
                     style_optimizer.zero_grad()
                     loss.backward(retain_graph=True)
                     style_optimizer.step()
@@ -633,7 +516,7 @@ def train(args):
                         'train_set_1': latents_model_1.state_dict()
                     }, path)
                     print('Saved checkpoints at', path)
-                elif global_step > 300000 and global_step < 308001 and global_step % 1000 == 0 and global_step > 0:
+                elif global_step > 120000 and global_step < 128001 and global_step % 1000 == 0 and global_step > 0:
                     path = os.path.join(ckpts_path, 'style_{:06d}.tar'.format(global_step))
                     torch.save({
                         'global_step': global_step,
@@ -693,15 +576,12 @@ def train(args):
         Origin_train(global_step)
     else:
         sv_name = '/decoder.pth'
-        is_ndc = ((args.dataset_type == 'llff' or args.dataset_type == 'mip360') and not args.no_ndc)
+        is_ndc = (args.dataset_type == 'llff' and not args.no_ndc)
         if not os.path.exists(sv_path + sv_name):
-            if (args.dataset_type == 'llff' or args.dataset_type == 'mip360'):
+            if args.dataset_type == 'llff':
                 train_temporal_invoke(save_dir=sv_path, sv_name=sv_name, log_dir=sv_path + '/style_decoder/',
                                       is_ndc=is_ndc,
                                       nerf_content_dir=nerf_gen_data_path, style_dir=args.styledir, batch_size=4)
-            else:
-                train_temporal_invoke_pl(save_dir=sv_path, sv_name=sv_name, log_dir=sv_path + '/style_decoder/',
-                                         nerf_content_dir=nerf_gen_data_path, style_dir=args.styledir, batch_size=4)
 
         if not os.path.exists(nerf_gen_data_path):
             Prepare_Style_data(nerf_gen_data_path=nerf_gen_data_path)

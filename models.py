@@ -8,6 +8,8 @@ from torch.nn import Parameter
 import torch.nn.functional as F
 from collections import OrderedDict
 from scipy.spatial.transform import Rotation as R
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class Sine(nn.Module):
     def __init__(self, w0=30.):
@@ -57,57 +59,6 @@ class Embedder(nn.Module):
         assert (out.shape[-1] == self.out_dim)
         return out
 
-class MLP(nn.Module):
-    def __init__(self, D=8, W=256, input_ch=3, input_ch_viewdirs=3, skips=[4], act_func=nn.ReLU, use_viewdir=True,
-                 sigma_mul=0.):
-        super().__init__()
-        self.input_ch = input_ch
-        self.input_ch_viewdirs = input_ch_viewdirs
-        self.skips = skips
-        self.use_viewdir = use_viewdir
-        self.sigma_mul = sigma_mul
-
-        self.base_layers = []
-        dim = self.input_ch
-        for i in range(D):
-            self.base_layers.append(nn.Linear(dim, W))
-            dim = W
-            if i in self.skips and i != (D - 1):
-                dim += input_ch
-        self.base_layers = nn.ModuleList(self.base_layers)
-        self.act = act_func()
-
-        self.sigma_layer = nn.Linear(dim, 1)
-        self.base_remap_layer = nn.Linear(dim, 256)
-
-        self.rgb_layers = []
-        dim = 256 + self.input_ch_viewdirs if self.use_viewdir else 256
-        self.rgb_layers.append(nn.Linear(dim, W // 2))
-        self.rgb_layers.append(nn.Linear(W // 2, 3))
-        self.rgb_layers = nn.ModuleList(self.rgb_layers)
-
-        self.layers = [*self.base_layers, self.sigma_layer, self.base_remap_layer, *self.rgb_layers]
-
-    def forward(self, pts, dirs):
-        base = self.base_layers[0](pts)
-        for i in range(len(self.base_layers) - 1):
-            if i in self.skips:
-                base = torch.cat((pts, base), dim=-1)
-            base = self.act(self.base_layers[i + 1](base))
-
-        sigma = self.sigma_layer(base)
-        sigma = sigma + F.relu(sigma) * self.sigma_mul
-
-        base_remap = self.act(self.base_remap_layer(base))
-        if self.use_viewdir:
-            rgb_fea = self.act(self.rgb_layers[0](torch.cat((base_remap, dirs), dim=-1)))
-        else:
-            rgb_fea = self.act(self.rgb_layers[0](base_remap))
-        rgb = torch.sigmoid(self.rgb_layers[1](rgb_fea))
-
-        ret = OrderedDict([('rgb', rgb),
-                          ('sigma', sigma.squeeze(-1))])
-        return ret
 
 class MLP_style(nn.Module):
     def __init__(self, D=8, W=256, input_ch=3, input_ch_viewdirs=3, skips=[4], act_func=nn.ReLU, use_viewdir=True,
@@ -165,54 +116,7 @@ class MLP_style(nn.Module):
             ret = OrderedDict([('rgb', rgb), ('base_remap', base_remap), ('pts', pts), ('sigma', sigma.squeeze(-1))])
         return ret
 
-class Nerf(nn.Module):
-    def __init__(self, args, mode='coarse'):
-        super().__init__()
-        self.use_viewdir = args.use_viewdir
-        act_func = act_dict[args.act_type]
-        self.is_siren = (args.act_type == 'sine')
 
-        if not self.is_siren:
-            self.embedder_coor = Embedder(input_dim=3, max_freq_log2=args.embed_freq_coor - 1,
-                                        N_freqs=args.embed_freq_coor)
-            self.embedder_dir = Embedder(input_dim=3, max_freq_log2=args.embed_freq_dir - 1,
-                                       N_freqs=args.embed_freq_dir)
-            input_ch, input_ch_viewdirs = self.embedder_coor.out_dim, self.embedder_dir.out_dim
-            skips = [4]
-            self.sigma_mul = 0.
-        else:
-            input_ch, input_ch_viewdirs = 3, 3
-            skips = []
-            self.sigma_mul = args.siren_sigma_mul
-
-        if mode == 'coarse':
-            net_depth, net_width = args.netdepth, args.netwidth
-        else:
-            net_depth, net_width = args.netdepth_fine, args.netwidth_fine
-
-        self.net = MLP(D=net_depth, W=net_width, input_ch=input_ch, input_ch_viewdirs=input_ch_viewdirs,
-                     skips=skips, use_viewdir=self.use_viewdir, act_func=act_func, sigma_mul=self.sigma_mul)
-
-    def forward(self, pts, dirs):
-        if not self.is_siren:
-            pts = self.embedder_coor(pts)
-            dirs = self.embedder_dir(dirs)
-        ret = self.net(pts, dirs)
-        return ret
-
-class SEAttention(nn.Module):
-    def __init__(self, channels, reduction=16):
-        super(SEAttention, self).__init__()
-        self.fc1 = nn.Linear(channels, channels // reduction)
-        self.fc2 = nn.Linear(channels // reduction, channels)
-
-    def forward(self, x):
-        squeeze = torch.mean(x, dim=0, keepdim=True)
-        excitation = F.relu(self.fc1(squeeze))
-        excitation = torch.sigmoid(self.fc2(excitation))
-        scaled_inputs = x * excitation
-        return scaled_inputs
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 class StyleMLP_before_concat(nn.Module):
     def __init__(self, args):
         super().__init__()
@@ -318,43 +222,6 @@ class StyleNerf(nn.Module):
         ret['dirs'] = kwargs['dirs']
         return ret
 
-
-
-
-
-def vec2skew(v):
-    zero = torch.zeros([v.shape[0], 1], dtype=torch.float32, device=v.device)
-    skew_v0 = torch.cat([zero, -v[:, 2:3], v[:, 1:2]], dim=-1)
-    skew_v1 = torch.cat([v[:, 2:3], zero, -v[:, 0:1]], dim=-1)
-    skew_v2 = torch.cat([-v[:, 1:2], v[:, 0:1], zero], dim=-1)
-    skew_v = torch.stack([skew_v0, skew_v1, skew_v2], dim=-1)
-    return skew_v
-
-def Exp(r):
-    skew_r = vec2skew(r)
-    norm_r = r.norm(dim=1, keepdim=True).unsqueeze(-1) + 1e-15
-    eye = torch.eye(3).unsqueeze(0).to(r.device)
-    R = eye + (torch.sin(norm_r) / norm_r) * skew_r + ((1 - torch.cos(norm_r)) / norm_r ** 2) * torch.matmul(skew_r, skew_r)
-    return R
-
-def make_c2w(r, t):
-    R = Exp(r)
-    c2w = torch.cat([R, t.unsqueeze(-1)], dim=-1)
-    c2w = torch.cat([c2w, torch.zeros_like(c2w[:, :1])], dim=1)
-    c2w[:, 3, 3] = 1.
-    return c2w
-
-def idx2img(idx, fea, pad=0):
-    batch_size, h, w, z = idx.shape
-    batch_size_p, point_num, dim = fea.shape
-    assert batch_size == batch_size_p, 'Batch Size Do Not Match'
-    idx_img = idx.reshape([batch_size, h*w*z, 1]).expand([batch_size, h*w*z, dim]).long()
-    idx_lst = point_num * torch.ones_like(idx_img)
-    idx_img = torch.where(idx_img >= 0, idx_img, idx_lst)
-    fea_pad = fea.reshape([1, batch_size*point_num, dim]).expand([batch_size, batch_size*point_num, dim])
-    fea_pad = torch.cat([fea_pad, pad * torch.ones([batch_size, 1, dim]).to(idx.device)], dim=1)
-    fea_img = torch.gather(fea_pad, 1, idx_img).reshape([batch_size, h, w, z, dim])
-    return fea_img
 
 class Camera:
     def __init__(self, projectionMatrix=None, cameraPose=None, device=torch.device("cpu")):
@@ -551,7 +418,6 @@ class VAE_decoder(nn.Module):
         x = self.output_layer(x)
         return x
 
-# 重参数化技巧
 def reparameterize(mu, log_var, factor=1.):
     std = torch.exp(0.5 * log_var) * factor
     eps = torch.randn_like(std)
@@ -624,19 +490,16 @@ class StyleLatents_variational(nn.Module):
     def forward(self, **kwargs):
         style_ids, frame_ids = kwargs['style_ids'], kwargs['frame_ids']
         flat_ids = style_ids * self.frame_num + frame_ids
-        # print(111, self.latents.reshape([-1, self.latent_dim])[0:5])
 
 
-        # if kwargs['type'] == 'llff':
-        #     latents = self.latents.reshape([-1, self.latent_dim]).repeat((7, 1))[flat_ids]
-        # else:
-        #     latents = self.latents.reshape([-1, self.latent_dim])[flat_ids]
-        latents = self.latents.reshape([-1, self.latent_dim])[flat_ids]
+        if kwargs['type'] == 'llff':
+            latents = self.latents.reshape([-1, self.latent_dim]).repeat((7, 1))[flat_ids]
+        else:
+            latents = self.latents.reshape([-1, self.latent_dim])[flat_ids]
+        # latents = self.latents.reshape([-1, self.latent_dim])[flat_ids]
 
 
         # mu = self.style_latents_mu[style_ids]
-        # print(111, latents.shape, self.latents.reshape([-1, self.latent_dim]).shape,
-        #       self.style_latents_mu.shape, flat_ids.shape, style_ids.shape)
         # mu = self.style_latents_mu.expand(2048, self.style_latents_mu.shape[-1]).to(device)
         mu = self.style_latents_mu[style_ids].to(device)
         latents = mu + self.sigma_scale * (latents - mu)

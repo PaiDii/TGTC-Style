@@ -26,7 +26,7 @@ python run_stylenerf.py --config ./configs/fern.txt
 ```
 
 ---
-## Evaluate
+## Render
 
 ```bash
 python run_stylenerf.py --config ./configs/fern.txt --render_train_style --chunk 1024

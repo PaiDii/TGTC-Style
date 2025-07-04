@@ -264,7 +264,7 @@ class StyleRaySampler(Dataset):
         # self.style_features = style_features
         # self.style_paths = style_paths
 
-        self.style_num = self.style_images.shape[0]
+        self.style_num = 1
         self.rays_o, self.rays_d = rays_o, rays_d
         self.rays_o_valid, self.rays_d_valid = rays_o_valid, rays_d_valid
 

@@ -12,8 +12,8 @@ pip install -r requirements.txt
 ```
 ---
 ### Dataset and Pre-trained Models
-Please download 3D scene datasets ([Baidu Disk](https://pan.baidu.com/s/1X_uXxgyO-mslnCTn4ioyNQ), code: `fo0q`) and Style image dataset ([Baidu Disk](https://pan.baidu.com/s/1X_uXxgyO-mslnCTn4ioyNQ), code: `fo0q`), then put the 3D scenes in `./data` and put a style image in `./style`.
+Please download 3D scene datasets ([Baidu Disk](https://pan.baidu.com/s/1vhdMzwLt4QHdWycIWFbmIw?pwd=rkwp), code: `rkwp`) and Style image dataset ([Baidu Disk](https://pan.baidu.com/s/1ULNmkeURmCylJeSJDtP0ZA?pwd=ku49), code: `ku49`), then put the 3D scenes in `./data` and put a style image in `./style`.
 
-Please download pre-trained VGG ([Baidu Disk](https://pan.baidu.com/s/1X_uXxgyO-mslnCTn4ioyNQ), code: `fo0q`), VAE ([Baidu Disk](https://pan.baidu.com/s/1X_uXxgyO-mslnCTn4ioyNQ), code: `fo0q`), CNN decoder ([Baidu Disk](https://pan.baidu.com/s/1X_uXxgyO-mslnCTn4ioyNQ), code: `fo0q`), then put the VGG and VAE in `./pretrained` and put the decoder in `./models`.
+Please download pre-trained VGG, VAE, and CNN decoder ([Baidu Disk](https://pan.baidu.com/s/1BpWZYDauJwsse8QLSzTmfw?pwd=cvdg), code: `cvdg`), then put the VGG and VAE in `./pretrained` and put the decoder in `./models`.
 
 ### Train

@@ -32,3 +32,9 @@ python run_stylenerf.py --config ./configs/fern.txt
 python run_stylenerf.py --config ./configs/fern.txt --render_train_style --chunk 1024
 python run_stylenerf.py --config ./configs/fern.txt --render_valid_style --chunk 1024
 ```
+
+---
+## Acknowledgements
+Our code is based on following codes, thanks for their generous open source:
+- [StylizedNeRF](https://github.com/IGLICT/StylizedNeRF)
+- [StyTR-2](https://github.com/diyiiyiii/StyTR-2)

@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from plyfile import PlyElement, PlyData
 from torch.utils.data import Dataset, DataLoader
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def json_read_rgbd(DepthImg_path, RgbImg_path, factor=1.):
     with open(DepthImg_path, 'r') as file:
         depth = np.array(json.load(file))

@@ -1,0 +1,15 @@
+opencv-python
+opencv-contrib-python
+imageio==2.27.0
+psutil
+plyfile
+pyrender
+tqdm
+matplotlib
+scikit-image
+natsort
+configargparse
+open3d
+tensorboardX
+pytorch3d
+colormath

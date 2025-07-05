@@ -38,3 +38,8 @@ python run_stylenerf.py --config ./configs/fern.txt --render_valid_style --chunk
 Our code is based on following codes, thanks for their generous open source:
 - [StylizedNeRF](https://github.com/IGLICT/StylizedNeRF)
 - [StyTR-2](https://github.com/diyiiyiii/StyTR-2)
+
+---
+## Citation
+```bash
+```

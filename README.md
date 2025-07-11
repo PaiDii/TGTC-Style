@@ -22,15 +22,15 @@ Please download pre-trained VGG, VAE, and CNN decoder ([Baidu Disk](https://pan.
 ## Train
 
 ```bash
-python run_stylenerf.py --config ./configs/fern.txt
+python train_tgtcs.py --config ./configs/fern.txt
 ```
 
 ---
 ## Render
 
 ```bash
-python run_stylenerf.py --config ./configs/fern.txt --render_train_style --chunk 1024
-python run_stylenerf.py --config ./configs/fern.txt --render_valid_style --chunk 1024
+python train_tgtcs.py --config ./configs/fern.txt --render_train_style --chunk 1024
+python train_tgtcs.py --config ./configs/fern.txt --render_valid_style --chunk 1024
 ```
 
 ---

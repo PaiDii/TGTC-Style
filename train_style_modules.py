@@ -303,7 +303,7 @@ def train_vae(args):
     writer.close()
 
 import transformer
-import StyTR
+import tctrans
 import trans_train
 import trans_test
 def train_temporal_invoke(save_dir, sv_name, log_dir, is_ndc, nerf_content_dir, style_dir, batch_size, data_p, n_threads=8, lr=5e-4, max_iter=100):  # max_iter=1000
@@ -326,8 +326,8 @@ def train_temporal_invoke(save_dir, sv_name, log_dir, is_ndc, nerf_content_dir, 
     writer = SummaryWriter(log_dir=str(log_dir))
     save_dir, log_dir = str(save_dir), str(log_dir)
 
-    decoder = StyTR.decoder
-    vgg = StyTR.vgg
+    decoder = tctrans.decoder
+    vgg = tctrans.vgg
 
     # ckpts = [os.path.join(save_dir, f) for f in sorted(os.listdir(save_dir)) if sv_name in f]
     # if len(ckpts) > 0:
@@ -344,7 +344,7 @@ def train_temporal_invoke(save_dir, sv_name, log_dir, is_ndc, nerf_content_dir, 
     vgg = nn.Sequential(*list(vgg.children())[:31])
 
     Trans = transformer.Transformer()
-    embedding = StyTR.PatchEmbed()
+    embedding = tctrans.PatchEmbed()
     from collections import OrderedDict
     # new_state_dict = OrderedDict()
     # ckpts = [os.path.join('./pretrained/', f) for f in sorted(os.listdir('./pretrained/')) if 'decoder' in f]
@@ -378,7 +378,7 @@ def train_temporal_invoke(save_dir, sv_name, log_dir, is_ndc, nerf_content_dir, 
     # vgg.eval()
     # embedding.train()
 
-    network = StyTR.StyTrans(vgg, decoder, embedding, Trans)
+    network = tctrans.StyTrans(vgg, decoder, embedding, Trans)
     network.train()
     network.to(device)
     network = nn.DataParallel(network, device_ids=[0, 1])

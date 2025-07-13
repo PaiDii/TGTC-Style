@@ -9,8 +9,8 @@ from os.path import splitext
 from torchvision import transforms
 from torchvision.utils import save_image
 from function import calc_mean_std, normal, coral
-import transformer as transformer
-import StyTR as StyTR
+import transformer
+import tctrans
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from function import normal
@@ -92,17 +92,17 @@ def transformer_render(
     if not os.path.exists(output_path):
         os.mkdir(output_path)
 
-    vgg_encoder = StyTR.vgg
+    vgg_encoder = tctrans.vgg
     vgg_encoder.load_state_dict(torch.load(vgg))
     vgg_encoder = nn.Sequential(*list(vgg_encoder.children())[:31])
 
-    decoder = StyTR.decoder
+    decoder = tctrans.decoder
     # This line is preserved as requested.
     if decoder_path is not None:
         print('decoder_path:', decoder_path)
         decoder.load_state_dict(torch.load(decoder_path)['decoder'])
     Trans = transformer.Transformer()
-    embedding = StyTR.PatchEmbed()
+    embedding = tctrans.PatchEmbed()
 
     decoder.eval()
     Trans.eval()
@@ -134,7 +134,7 @@ def transformer_render(
         new_state_dict[namekey] = v
     embedding.load_state_dict(new_state_dict)
 
-    network = StyTR.StyTrans(vgg_encoder, decoder, embedding, Trans)
+    network = tctrans.StyTrans(vgg_encoder, decoder, embedding, Trans)
     network.eval()
     network.to(device)
 

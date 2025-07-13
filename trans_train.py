@@ -11,8 +11,8 @@ from tensorboardX import SummaryWriter
 from torchvision import transforms
 from tqdm import tqdm
 from pathlib import Path
-import transformer as transformer
-import StyTR as StyTR
+import transformer
+import tctrans
 from sampler import InfiniteSamplerWrapper
 from torchvision.utils import save_image
 import cv2
@@ -110,16 +110,16 @@ def train_transformer(
         os.mkdir(log_dir)
     writer = SummaryWriter(log_dir=log_dir)
 
-    vgg_encoder = StyTR.vgg
+    vgg_encoder = tctrans.vgg
     vgg_encoder.load_state_dict(torch.load(vgg))
     vgg_encoder = nn.Sequential(*list(vgg_encoder.children())[:31])
 
-    decoder = StyTR.decoder
+    decoder = tctrans.decoder
     decoder.load_state_dict(torch.load('./models/decoder.pth'))
-    embedding = StyTR.PatchEmbed()
+    embedding = tctrans.PatchEmbed()
     Trans = transformer.Transformer()
 
-    network = StyTR.StyTrans(vgg_encoder, decoder, embedding, Trans)
+    network = tctrans.StyTrans(vgg_encoder, decoder, embedding, Trans)
     network.train()
     network.to(device)
     if USE_CUDA and torch.cuda.device_count() > 1:

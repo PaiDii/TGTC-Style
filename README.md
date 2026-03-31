@@ -1,5 +1,5 @@
 # TGTC-Style
-This repository contains a pytorch implementation for the paper: Texture-Consistent 3D Scene Style Transfer via Transformer-Guided Neural Radiance Fields.
+This repository contains a pytorch implementation for the paper: "Texture-Consistent 3D Scene Style Transfer via Transformer-Guided Neural Radiance Fields" (TIP2025).
 ![consec](https://github.com/user-attachments/assets/aef659dc-3beb-49f0-90a9-2a5d6bfde95b)
 
 ---
@@ -36,4 +36,12 @@ python train_tgtcs.py --config ./configs/fern.txt --render_valid_style --chunk 1
 ---
 ## Citation
 ```bash
+@ARTICLE{TGTC-Style,
+  author={Chen, Wudi and Zha, Zhiyuan and Wang, Shigang and Ali, Liaqat and Wen, Bihan and Yuan, Xin and Zhou, Jiantao and Zhu, Ce},
+  journal={IEEE Transactions on Image Processing}, 
+  title={Texture-Consistent 3D Scene Style Transfer via Transformer-Guided Neural Radiance Fields}, 
+  year={2025},
+  volume={34},
+  pages={7193-7208},
+  doi={10.1109/TIP.2025.3626892}}
 ```

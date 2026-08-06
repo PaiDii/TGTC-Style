@@ -254,14 +254,6 @@ Please cite our paper if you find this repository useful for your research:
 
 ---
 
-## 🙏 Acknowledgements
-
-We sincerely thank the authors and contributors of the open-source projects and datasets that supported this work.
-
-This repository is intended for academic research and non-commercial use.
-
----
-
 ## 📬 Contact
 
 For questions regarding the paper or code, please open an issue in this repository:

@@ -1,10 +1,7 @@
 <div align="center">
 
-# TGTC-Style
-
 ### Texture-Consistent 3D Scene Style Transfer via Transformer-Guided Neural Radiance Fields
 
-If this project is helpful to your research, please consider giving the repository a ⭐.
 
 [![Paper](https://img.shields.io/badge/Paper-IEEE%20TIP-00629B?style=for-the-badge\&logo=ieee)](https://doi.org/10.1109/TIP.2025.3626892)
 [![PyTorch](https://img.shields.io/badge/Framework-PyTorch-EE4C2C?style=for-the-badge\&logo=pytorch\&logoColor=white)](https://pytorch.org/)
@@ -13,14 +10,7 @@ If this project is helpful to your research, please consider giving the reposito
 
 Official PyTorch implementation of the IEEE TIP 2025 paper:
 
-**“Texture-Consistent 3D Scene Style Transfer via Transformer-Guided Neural Radiance Fields”**
-
-[Paper](https://doi.org/10.1109/TIP.2025.3626892) ·
-[Code](https://github.com/PaiDii/TGTC-Style) ·
-[Installation](#-installation) ·
-[Datasets](#-datasets-and-pre-trained-models) ·
-[Training](#-training) ·
-[Citation](#-citation)
+If this project is helpful to your research, please consider giving the repository a ⭐.
 
 </div>
 
